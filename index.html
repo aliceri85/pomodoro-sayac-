@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gezegen Pomodoro</title>
+    <style>
+        /* --- GENEL AYARLAR & DESENLER --- */
+        body {
+            background-color: #1e1e2e; /* VS Code koyu arka plan */
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            /* TEKNİK DESEN (Noktalı Izgara) */
+            background-image: radial-gradient(#3b3b4f 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* --- ANA KONTEYNER (Mobil Uyumlu) --- */
+        .container {
+            position: relative;
+            width: 320px; /* Mobilde taşmasın diye biraz küçülttük */
+            height: 320px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            /* Mobilde ekran çok küçükse otomatik ölçekle */
+            transform: scale(1);
+        }
+
+        /* --- ORTADAKİ BÜYÜK DAİRE --- */
+        .main-circle {
+            width: 180px;
+            height: 180px;
+            background: #252535;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0,0,0,0.5);
+            z-index: 2;
+            border: 3px solid #ff6b6b;
+            transition: border-color 0.5s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(5px);
+        }
+
+        /* Sayaç çalışırken hafif "kalp atışı" efekti */
+        .main-circle.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(255, 107, 107, 0.4);
+        }
+
+        .timer-content {
+            text-align: center;
+        }
+
+        #timer {
+            font-size: 3.5rem; /* Mobilde daha okunaklı */
+            margin: 0;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            font-variant-numeric: tabular-nums; /* Sayıların zıplamasını engeller */
+        }
+
+        #status-text {
+            margin: 0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #a9a9b3;
+        }
+
+        /* --- UYDULAR (YÖRÜNGE) --- */
+        .orbit {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            border: 1px dashed rgba(255, 255, 255, 0.1); /* Yörünge çizgisi */
+            animation: rotateOrbit 60s linear infinite;
+            z-index: 1;
+            pointer-events: none; /* Tıklamayı engellemesin */
+        }
+
+        .satellite {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background-color: #ff6b6b;
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            /* --i değişkenine göre yerleşim */
+            transform: rotate(calc(45deg * var(--i))) translate(140px) rotate(calc(-45deg * var(--i)));
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.8);
+            transition: background-color 0.5s ease;
+        }
+
+        /* --- BUTONLAR --- */
+        .controls {
+            position: absolute;
+            bottom: -80px; /* Dairenin altına ittik */
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            background-color: #323246;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        /* Butonlara özel renkler */
+        button:nth-child(1) { color: #81f499; } /* Başlat - Yeşilimsi */
+        button:nth-child(2) { color: #f4d481; } /* Duraklat - Sarımsı */
+        button:nth-child(3) { color: #ff8181; } /* Sıfırla - Kırmızımsı */
+
+        /* --- MOLA MODU --- */
+        body.break-mode .main-circle { border-color: #4ecdc4; }
+        body.break-mode .satellite { background-color: #4ecdc4; box-shadow: 0 0 15px rgba(78, 205, 196, 0.8); }
+        body.break-mode .main-circle.active { box-shadow: 0 0 40px rgba(78, 205, 196, 0.4); }
+
+        /* --- ANİMASYON --- */
+        @keyframes rotateOrbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Çok küçük telefonlar için (iPhone SE vb.) küçültme */
+        @media (max-width: 380px) {
+            .container { transform: scale(0.85); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="orbit">
+            <div class="satellite" style="--i:0"></div>
+            <div class="satellite" style="--i:1"></div>
+            <div class="satellite" style="--i:2"></div>
+            <div class="satellite" style="--i:3"></div>
+            <div class="satellite" style="--i:4"></div>
+            <div class="satellite" style="--i:5"></div>
+            <div class="satellite" style="--i:6"></div>
+            <div class="satellite" style="--i:7"></div>
+        </div>
+
+        <div class="main-circle" id="circle-bg">
+            <div class="timer-content">
+                <h2 id="status-text">Çalışma</h2>
+                <h1 id="timer">25:00</h1>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="startTimer()">Başlat</button>
+            <button onclick="pauseTimer()">Dur</button>
+            <button onclick="resetTimer()">Sıfırla</button>
+        </div>
+    </div>
+
+    <script>
+        let timer;
+        let isWorking = true;
+        let timeLeft = 25 * 60;
+        let isRunning = false;
+
+        const timerElement = document.getElementById('timer');
+        const statusText = document.getElementById('status-text');
+        const body = document.body;
+        const mainCircle = document.getElementById('circle-bg');
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Sayfa başlığını da güncelle (tarayıcı sekmesi için)
+            document.title = `${timerElement.textContent} - ${isWorking ? 'Çalışma' : 'Mola'}`;
+        }
+
+        function switchMode() {
+            isWorking = !isWorking;
+            
+            if (isWorking) {
+                timeLeft = 25 * 60;
+                statusText.textContent = "Çalışma";
+                body.classList.remove('break-mode');
+            } else {
+                timeLeft = 15 * 60;
+                statusText.textContent = "Mola";
+                body.classList.add('break-mode');
+            }
+            updateDisplay();
+            pauseTimer();
+            // Titreşim (Mobilde çalışır)
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            alert(isWorking ? "Hadi tekrar odaklanalım!" : "Dinlenme vakti!");
+        }
+
+        function startTimer() {
+            if (!isRunning) {
+                isRunning = true;
+                mainCircle.classList.add('active'); // Nefes alma efekti başlasın
+                timer = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateDisplay();
+                    } else {
+                        switchMode();
+                    }
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            clearInterval(timer);
+            isRunning = false;
+            mainCircle.classList.remove('active'); // Efekti durdur
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timeLeft = isWorking ? 25 * 60 : 15 * 60;
+            updateDisplay();
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>
